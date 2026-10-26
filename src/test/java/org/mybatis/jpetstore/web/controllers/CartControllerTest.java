@@ -314,4 +314,28 @@ class CartControllerTest {
     org.mockito.Mockito.verify(session).setAttribute(org.mockito.ArgumentMatchers.eq("cart"),
         org.mockito.ArgumentMatchers.any(Cart.class));
   }
+
+  // R3: an ID that is only spaces counts as missing when adding
+  @Test
+  void addItemWithBlankIdReturnsError() {
+    HttpSession session = mock(HttpSession.class);
+    Model model = new ExtendedModelMap();
+
+    String view = cartController.addItemToCart("   ", session, model);
+
+    assertThat(view).isEqualTo("common/Error");
+    assertThat(model.asMap().get("message")).isEqualTo("Invalid item ID: cannot add item to cart.");
+  }
+
+  // R3: an ID that is only spaces counts as missing when removing
+  @Test
+  void removeItemWithBlankIdReturnsError() {
+    HttpSession session = mock(HttpSession.class);
+    Model model = new ExtendedModelMap();
+
+    String view = cartController.removeItemFromCart("   ", session, model);
+
+    assertThat(view).isEqualTo("common/Error");
+    assertThat(model.asMap().get("message")).isEqualTo("Invalid item ID: cannot remove item from cart.");
+  }
 }

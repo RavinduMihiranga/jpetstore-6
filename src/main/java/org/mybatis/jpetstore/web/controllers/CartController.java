@@ -95,9 +95,9 @@ public class CartController {
   @GetMapping("/addItem")
   public String addItemToCart(@RequestParam(value = "workingItemId", required = false) String workingItemId,
       HttpSession session, Model model) {
-    if (workingItemId == null || workingItemId.trim().isEmpty()) {
-      model.addAttribute("message", "Invalid item ID: cannot add item to cart.");
-      return ERROR_VIEW;
+    // Stop early if no item was given
+    if (isMissingItemId(workingItemId)) {
+      return showError(model, "Invalid item ID: cannot add item to cart.");
     }
     Cart cart = getCart(session);
     if (cart.containsItemId(workingItemId)) {
@@ -126,15 +126,17 @@ public class CartController {
   @GetMapping("/removeItem")
   public String removeItemFromCart(@RequestParam(value = "workingItemId", required = false) String workingItemId,
       HttpSession session, Model model) {
-    if (workingItemId == null || workingItemId.trim().isEmpty()) {
-      model.addAttribute("message", "Invalid item ID: cannot remove item from cart.");
-      return ERROR_VIEW;
+    // Stop early if no item was given
+    if (isMissingItemId(workingItemId)) {
+      return showError(model, "Invalid item ID: cannot remove item from cart.");
     }
+
     Cart cart = getCart(session);
     Item item = cart.removeItemById(workingItemId);
+
+    // The item was not in the cart, so there was nothing to remove
     if (item == null) {
-      model.addAttribute("message", "Attempted to remove null CartItem from Cart.");
-      return ERROR_VIEW;
+      return showError(model, "Attempted to remove null CartItem from Cart.");
     }
     model.addAttribute("cart", cart);
     return "cart/Cart";
@@ -205,6 +207,21 @@ public class CartController {
   public String checkOut(HttpSession session, Model model) {
     model.addAttribute("cart", getCart(session));
     return "cart/Checkout";
+  }
+
+  // R3: Extract Method
+  // One place that decides if an item ID is missing
+  // Before this, the same check was copied into addItemToCart() and removeItemFromCart()
+  private boolean isMissingItemId(String itemId) {
+    return itemId == null || itemId.isBlank();
+  }
+
+  // R3: Extract Method
+  // One place that shows the error page with a message
+  // Before this, these two lines were copied three times
+  private String showError(Model model, String message) {
+    model.addAttribute("message", message);
+    return ERROR_VIEW;
   }
 
 }
