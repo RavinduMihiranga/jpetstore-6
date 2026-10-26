@@ -640,7 +640,7 @@ public class Order implements Serializable {
     locale = "CA";
     status = "P";
 
-    Iterator<CartItem> i = cart.getAllCartItems();
+    Iterator<CartItem> i = cart.getCartItems();
     while (i.hasNext()) {
       CartItem cartItem = i.next();
       addLineItem(cartItem);

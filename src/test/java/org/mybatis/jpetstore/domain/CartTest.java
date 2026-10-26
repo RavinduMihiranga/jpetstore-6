@@ -242,4 +242,47 @@ class CartTest {
     assertThat(cart.getSubTotal()).isEqualTo(new BigDecimal("10.25"));
   }
 
+  // R2: items come back in the order they were added
+  // (the old ConcurrentHashMap could not do this, which is why a second list existed)
+  @Test
+  void cartKeepsInsertionOrder() {
+    Cart cart = new Cart();
+
+    Item first = new Item();
+    first.setItemId("I01");
+    first.setListPrice(new BigDecimal("1.00"));
+
+    Item second = new Item();
+    second.setItemId("I02");
+    second.setListPrice(new BigDecimal("2.00"));
+
+    Item third = new Item();
+    third.setItemId("I03");
+    third.setListPrice(new BigDecimal("3.00"));
+
+    cart.addItem(first, true);
+    cart.addItem(second, true);
+    cart.addItem(third, true);
+
+    assertThat(cart.getCartItemList().get(0).getItem()).isSameAs(first);
+    assertThat(cart.getCartItemList().get(1).getItem()).isSameAs(second);
+    assertThat(cart.getCartItemList().get(2).getItem()).isSameAs(third);
+  }
+
+  // R2: changing the returned list must not change the cart
+  // (before R2 this list WAS the cart's own list, which is how the R1 bug could happen)
+  @Test
+  void changingReturnedListDoesNotChangeCart() {
+    Cart cart = new Cart();
+    Item item = new Item();
+    item.setItemId("I01");
+    item.setListPrice(new BigDecimal("2.05"));
+    cart.addItem(item, true);
+
+    cart.getCartItemList().clear();
+
+    assertThat(cart.getNumberOfItems()).isEqualTo(1);
+    assertThat(cart.containsItemId("I01")).isTrue();
+  }
+
 }

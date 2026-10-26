@@ -19,160 +19,112 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * The Class Cart.
- */
+// A shopping cart for one user's session.
+// R2: items are kept in ONE LinkedHashMap instead of a map plus a list.
+// The LinkedHashMap gives fast lookup by item ID and also remembers the order items were added,
+// so there is no second collection that can get out of sync.
 public class Cart implements Serializable {
 
-  /** The serial version uid. */
-  private static final long serialVersionUID = 8329559983943337176L;
+    private static final long serialVersionUID = 8329559983943337176L;
 
-  /** The item map. */
-  private final Map<String, CartItem> itemMap = new ConcurrentHashMap<>();
+    // item ID -> cart item, kept in the order the items were added
+    private final Map<String, CartItem> items = new LinkedHashMap<>();
 
-  /** The item list. */
-  private final List<CartItem> itemList = new ArrayList<>();
-
-  /**
-   * Gets the cart items.
-   *
-   * @return the cart items
-   */
-  public Iterator<CartItem> getCartItems() {
-    return itemList.iterator();
-  }
-
-  /**
-   * Gets the cart item list.
-   *
-   * @return the cart item list
-   */
-  public List<CartItem> getCartItemList() {
-    return itemList;
-  }
-
-  /**
-   * Gets the number of items.
-   *
-   * @return the number of items
-   */
-  public int getNumberOfItems() {
-    return itemList.size();
-  }
-
-  /**
-   * Gets the all cart items.
-   *
-   * @return the all cart items
-   */
-  public Iterator<CartItem> getAllCartItems() {
-    return itemList.iterator();
-  }
-
-  /**
-   * Contains item id.
-   *
-   * @param itemId
-   *          the item id
-   *
-   * @return true, if successful
-   */
-  public boolean containsItemId(String itemId) {
-    return itemMap.containsKey(itemId);
-  }
-
-  /**
-   * Adds the item.
-   *
-   * @param item
-   *          the item
-   * @param isInStock
-   *          the is in stock
-   */
-  public void addItem(Item item, boolean isInStock) {
-    CartItem cartItem = itemMap.get(item.getItemId());
-    if (cartItem == null) {
-      cartItem = new CartItem();
-      cartItem.setItem(item);
-      cartItem.setQuantity(0);
-      cartItem.setInStock(isInStock);
-      itemMap.put(item.getItemId(), cartItem);
-      itemList.add(cartItem);
-    }
-    cartItem.incrementQuantity();
-  }
-
-  /**
-   * Removes the item by id.
-   *
-   * @param itemId
-   *          the item id
-   *
-   * @return the item
-   */
-  public Item removeItemById(String itemId) {
-    CartItem cartItem = itemMap.remove(itemId);
-    if (cartItem == null) {
-      return null;
-    } else {
-      itemList.remove(cartItem);
-      return cartItem.getItem();
-    }
-  }
-
-  /**
-   * Increment quantity by item id.
-   *
-   * @param itemId
-   *          the item id
-   */
-  public void incrementQuantityByItemId(String itemId) {
-    CartItem cartItem = itemMap.get(itemId);
-    cartItem.incrementQuantity();
-  }
-
-  /**
-   * Set quantity by item id.
-   *
-   * @param itemId
-   *          the item id
-   * @param quantity
-   *          the quantity
-   */
-  public void setQuantityByItemId(String itemId, int quantity) {
-    CartItem cartItem = itemMap.get(itemId);
-    cartItem.setQuantity(quantity);
-  }
-
-  // Update how many of an item are in the cart
-  // A quantity below 1 means the user wants the item gone, so it is removed completely
-  // Before this, the controller removed the item from the list only and left it in the map
-  public void updateQuantity(String itemId, int quantity) {
-    if (itemId == null || itemId.isBlank()) {
-      throw new IllegalArgumentException("Item ID cannot be blank.");
+    // Loop over the items in the order they were added
+    public Iterator<CartItem> getCartItems() {
+        return getCartItemList().iterator();
     }
 
-    if (quantity < 1) {
-      // removeItemById() removes from BOTH the map and the list
-      removeItemById(itemId);
-    } else {
-      setQuantityByItemId(itemId, quantity);
+    // The items as a list, used by the cart and checkout pages (cart.cartItemList)
+    // A copy is returned so callers cannot change the cart behind its back
+    public List<CartItem> getCartItemList() {
+        return new ArrayList<>(items.values());
     }
-  }
 
-  /**
-   * Gets the sub total.
-   *
-   * @return the sub total
-   */
-  public BigDecimal getSubTotal() {
-    return itemList.stream()
-        .map(cartItem -> cartItem.getItem().getListPrice().multiply(new BigDecimal(cartItem.getQuantity())))
-        .reduce(BigDecimal.ZERO, BigDecimal::add);
-  }
+    // How many different items are in the cart
+    public int getNumberOfItems() {
+        return items.size();
+    }
+
+    // Old name for getCartItems(), kept so existing code still works
+    @Deprecated
+    public Iterator<CartItem> getAllCartItems() {
+        return getCartItems();
+    }
+
+    // Is this item already in the cart?
+    public boolean containsItemId(String itemId) {
+        return items.containsKey(itemId);
+    }
+
+    // Add one of an item. If it is new it starts at 0 and then goes up to 1.
+    public void addItem(Item item, boolean isInStock) {
+        CartItem cartItem = items.get(item.getItemId());
+
+        if (cartItem == null) {
+            cartItem = new CartItem();
+            cartItem.setItem(item);
+            cartItem.setQuantity(0);
+            cartItem.setInStock(isInStock);
+            items.put(item.getItemId(), cartItem);
+        }
+
+        cartItem.incrementQuantity();
+    }
+
+    // Remove an item completely
+    // Returns the removed item, or null if it was not in the cart
+    public Item removeItemById(String itemId) {
+        CartItem cartItem = items.remove(itemId);
+
+        if (cartItem == null) {
+            return null;
+        }
+
+        return cartItem.getItem();
+    }
+
+    // Add one more of an item that is already in the cart
+    public void incrementQuantityByItemId(String itemId) {
+        CartItem cartItem = items.get(itemId);
+        cartItem.incrementQuantity();
+    }
+
+    // Set the quantity of an item that is already in the cart
+    public void setQuantityByItemId(String itemId, int quantity) {
+        CartItem cartItem = items.get(itemId);
+        cartItem.setQuantity(quantity);
+    }
+
+    // Update how many of an item are in the cart (R1: Move Method)
+    // A quantity below 1 means the user wants the item gone, so it is removed completely.
+    public void updateQuantity(String itemId, int quantity) {
+        if (itemId == null || itemId.isBlank()) {
+            throw new IllegalArgumentException("Item ID cannot be blank.");
+        }
+
+        if (quantity < 1) {
+            removeItemById(itemId);
+        } else {
+            setQuantityByItemId(itemId, quantity);
+        }
+    }
+
+    // Total price of everything in the cart: list price x quantity for each item
+    public BigDecimal getSubTotal() {
+        BigDecimal subTotal = BigDecimal.ZERO;
+
+        for (CartItem cartItem : items.values()) {
+            BigDecimal price = cartItem.getItem().getListPrice();
+            BigDecimal quantity = new BigDecimal(cartItem.getQuantity());
+            subTotal = subTotal.add(price.multiply(quantity));
+        }
+
+        return subTotal;
+    }
 
 }
