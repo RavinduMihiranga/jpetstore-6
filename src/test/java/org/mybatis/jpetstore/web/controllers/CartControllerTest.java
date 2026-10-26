@@ -16,6 +16,7 @@
 package org.mybatis.jpetstore.web.controllers;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -245,6 +246,41 @@ class CartControllerTest {
 
     assertThat(view).isEqualTo("cart/Cart");
     assertThat(cart.getCartItemList().get(0).getQuantity()).isEqualTo(1);
+  }
+
+  // Regression test for the bug found during code analysis:
+  // setting a quantity to 0 removed the item from the cart's list but NOT from its map,
+  // so adding the same item again only bumped a hidden entry and the item never showed up
+  @Test
+  void itemCanBeAddedAgainAfterQuantitySetToZero() {
+    HttpSession session = mock(HttpSession.class);
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    Model model = new ExtendedModelMap();
+
+    // Start with one item in the cart
+    Cart cart = new Cart();
+    Item item = new Item();
+    item.setItemId("EST-1");
+    item.setListPrice(new java.math.BigDecimal("10.00"));
+    cart.addItem(item, true);
+    when(session.getAttribute("cart")).thenReturn(cart);
+
+    // The user types 0 as the quantity, which should remove the item
+    when(request.getParameter("EST-1")).thenReturn("0");
+    cartController.updateCartQuantities(request, session, model);
+
+    // The cart should forget the item completely (this line failed before R1)
+    assertThat(cart.containsItemId("EST-1")).isFalse();
+
+    // The user adds the same item again
+    when(catalogService.isItemInStock("EST-1")).thenReturn(true);
+    when(catalogService.getItem("EST-1")).thenReturn(item);
+    cartController.addItemToCart("EST-1", session, model);
+
+    // It should be visible again with quantity 1, and the map should agree
+    assertThat(cart.getCartItemList()).hasSize(1);
+    assertThat(cart.getCartItemList().get(0).getQuantity()).isEqualTo(1);
+    assertThat(cart.containsItemId("EST-1")).isTrue();
   }
 
   /**

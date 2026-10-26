@@ -148,6 +148,22 @@ public class Cart implements Serializable {
     cartItem.setQuantity(quantity);
   }
 
+  // Update how many of an item are in the cart
+  // A quantity below 1 means the user wants the item gone, so it is removed completely
+  // Before this, the controller removed the item from the list only and left it in the map
+  public void updateQuantity(String itemId, int quantity) {
+    if (itemId == null || itemId.isBlank()) {
+      throw new IllegalArgumentException("Item ID cannot be blank.");
+    }
+
+    if (quantity < 1) {
+      // removeItemById() removes from BOTH the map and the list
+      removeItemById(itemId);
+    } else {
+      setQuantityByItemId(itemId, quantity);
+    }
+  }
+
   /**
    * Gets the sub total.
    *

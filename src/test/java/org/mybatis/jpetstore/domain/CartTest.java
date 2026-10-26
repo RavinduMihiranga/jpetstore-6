@@ -211,4 +211,35 @@ class CartTest {
     assertThat(subTotal).isEqualTo(new BigDecimal("28.61"));
   }
 
+  // R1: setting the quantity to 0 removes the item from the cart completely
+  @Test
+  void updateQuantityToZeroRemovesItem() {
+    Cart cart = new Cart();
+    Item item = new Item();
+    item.setItemId("I01");
+    item.setListPrice(new BigDecimal("2.05"));
+    cart.addItem(item, true);
+
+    cart.updateQuantity("I01", 0);
+
+    assertThat(cart.getNumberOfItems()).isZero();
+    assertThat(cart.containsItemId("I01")).isFalse();
+  }
+
+  // R1: a positive quantity replaces the old one and the subtotal follows
+  @Test
+  void updateQuantitySetsNewQuantity() {
+    Cart cart = new Cart();
+    Item item = new Item();
+    item.setItemId("I01");
+    item.setListPrice(new BigDecimal("2.05"));
+    cart.addItem(item, true);
+
+    cart.updateQuantity("I01", 5);
+
+    // 5 x 2.05 = 10.25
+    assertThat(cart.getCartItemList().get(0).getQuantity()).isEqualTo(5);
+    assertThat(cart.getSubTotal()).isEqualTo(new BigDecimal("10.25"));
+  }
+
 }
