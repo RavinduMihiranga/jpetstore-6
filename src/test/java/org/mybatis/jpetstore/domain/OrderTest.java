@@ -107,4 +107,48 @@ class OrderTest {
     assertThat(formattedOrderDate).isEqualTo("2026/08/15 13:45:30");
   }
 
+  // R4: the customer's name is copied to both shipping and billing
+  // (the original test checked the address fields but never the names)
+  @Test
+  void initOrderCopiesNameToShippingAndBilling() {
+    Account account = new Account();
+    account.setUsername("mybatis");
+    account.setFirstName("My");
+    account.setLastName("Batis");
+
+    Order order = new Order();
+    order.initOrder(account, new Cart());
+
+    assertThat(order.getShipToFirstName()).isEqualTo("My");
+    assertThat(order.getShipToLastName()).isEqualTo("Batis");
+    assertThat(order.getBillToFirstName()).isEqualTo("My");
+    assertThat(order.getBillToLastName()).isEqualTo("Batis");
+  }
+
+  // R4: each cart item becomes an order line, numbered in the order it was added
+  @Test
+  void initOrderNumbersLineItemsInCartOrder() {
+    Cart cart = new Cart();
+
+    Item first = new Item();
+    first.setItemId("I01");
+    first.setListPrice(new BigDecimal("1.00"));
+
+    Item second = new Item();
+    second.setItemId("I02");
+    second.setListPrice(new BigDecimal("2.00"));
+
+    cart.addItem(first, true);
+    cart.addItem(second, true);
+
+    Order order = new Order();
+    order.initOrder(new Account(), cart);
+
+    assertThat(order.getLineItems()).hasSize(2);
+    assertThat(order.getLineItems().get(0).getItemId()).isEqualTo("I01");
+    assertThat(order.getLineItems().get(0).getLineNumber()).isEqualTo(1);
+    assertThat(order.getLineItems().get(1).getItemId()).isEqualTo("I02");
+    assertThat(order.getLineItems().get(1).getLineNumber()).isEqualTo(2);
+  }
+
 }

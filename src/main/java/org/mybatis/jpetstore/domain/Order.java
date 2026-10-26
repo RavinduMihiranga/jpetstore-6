@@ -21,7 +21,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -31,6 +30,18 @@ public class Order implements Serializable {
 
   /** The serial version uid. */
   private static final long serialVersionUID = 6321792448424424931L;
+
+  // R4: Replace Literal with Constant
+  // Placeholder values pre-filled in the order form (NewOrderForm.jsp tells users to use a fake card number)
+  // The user can change the card details on the form before placing the order
+  private static final String DEFAULT_CREDIT_CARD = "999 9999 9999 9999";
+  private static final String DEFAULT_EXPIRY_DATE = "12/03";
+  private static final String DEFAULT_CARD_TYPE = "Visa";
+  private static final String DEFAULT_COURIER = "UPS";
+  private static final String DEFAULT_LOCALE = "CA";
+
+  // A new order waits as "pending" until it is processed
+  private static final String STATUS_PENDING = "P";
 
   /** The order id. */
   private int orderId;
@@ -608,11 +619,24 @@ public class Order implements Serializable {
    * @param cart
    *          the cart
    */
+  // Fill in a new order from the customer's account and their cart
+  // R4: Extract Method. Each step now lives in its own small method,
+  // so this method reads like a list of steps instead of 39 lines of assignments.
   public void initOrder(Account account, Cart cart) {
-
     username = account.getUsername();
     orderDate = LocalDateTime.now(ZoneId.systemDefault());
 
+    copyShippingDetails(account);
+    copyBillingDetails(account);
+
+    totalPrice = cart.getSubTotal();
+    applyDefaultOrderDetails();
+
+    addLineItemsFrom(cart);
+  }
+
+  // Ship to the customer's own name and address
+  private void copyShippingDetails(Account account) {
     shipToFirstName = account.getFirstName();
     shipToLastName = account.getLastName();
     shipAddress1 = account.getAddress1();
@@ -621,7 +645,10 @@ public class Order implements Serializable {
     shipState = account.getState();
     shipZip = account.getZip();
     shipCountry = account.getCountry();
+  }
 
+  // Bill the customer's own name and address
+  private void copyBillingDetails(Account account) {
     billToFirstName = account.getFirstName();
     billToLastName = account.getLastName();
     billAddress1 = account.getAddress1();
@@ -630,22 +657,23 @@ public class Order implements Serializable {
     billState = account.getState();
     billZip = account.getZip();
     billCountry = account.getCountry();
+  }
 
-    totalPrice = cart.getSubTotal();
+  // Pre-fill the payment and delivery details shown on the order form
+  private void applyDefaultOrderDetails() {
+    creditCard = DEFAULT_CREDIT_CARD;
+    expiryDate = DEFAULT_EXPIRY_DATE;
+    cardType = DEFAULT_CARD_TYPE;
+    courier = DEFAULT_COURIER;
+    locale = DEFAULT_LOCALE;
+    status = STATUS_PENDING;
+  }
 
-    creditCard = "999 9999 9999 9999";
-    expiryDate = "12/03";
-    cardType = "Visa";
-    courier = "UPS";
-    locale = "CA";
-    status = "P";
-
-    Iterator<CartItem> i = cart.getCartItems();
-    while (i.hasNext()) {
-      CartItem cartItem = i.next();
+  // Turn every item in the cart into a numbered line on the order
+  private void addLineItemsFrom(Cart cart) {
+    for (CartItem cartItem : cart.getCartItemList()) {
       addLineItem(cartItem);
     }
-
   }
 
   /**
