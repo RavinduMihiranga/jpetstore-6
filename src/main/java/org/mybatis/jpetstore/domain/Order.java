@@ -40,9 +40,6 @@ public class Order implements Serializable {
   private static final String DEFAULT_COURIER = "UPS";
   private static final String DEFAULT_LOCALE = "CA";
 
-  // A new order waits as "pending" until it is processed
-  private static final String STATUS_PENDING = "P";
-
   /** The order id. */
   private int orderId;
   /** The username. */
@@ -592,6 +589,21 @@ public class Order implements Serializable {
     this.status = status;
   }
 
+  // R5: the status as an enum
+  // Returns null if the stored code is not a known status
+  public OrderStatus getOrderStatus() {
+    return OrderStatus.fromCode(status);
+  }
+
+  // R5: set the status using the enum
+  public void setOrderStatus(OrderStatus orderStatus) {
+    if (orderStatus == null) {
+      throw new IllegalArgumentException("Order status cannot be null.");
+    }
+
+    this.status = orderStatus.getCode();
+  }
+
   /**
    * Sets the line items.
    *
@@ -666,7 +678,8 @@ public class Order implements Serializable {
     cardType = DEFAULT_CARD_TYPE;
     courier = DEFAULT_COURIER;
     locale = DEFAULT_LOCALE;
-    status = STATUS_PENDING;
+    // Every new order starts as pending
+    status = OrderStatus.PENDING.getCode();
   }
 
   // Turn every item in the cart into a numbered line on the order

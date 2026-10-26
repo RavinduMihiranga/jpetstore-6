@@ -151,4 +151,34 @@ class OrderTest {
     assertThat(order.getLineItems().get(1).getLineNumber()).isEqualTo(2);
   }
 
+  // R5: a new order starts as PENDING, and the database still gets the old "P" code
+  @Test
+  void newOrderIsPending() {
+    Order order = new Order();
+    order.initOrder(new Account(), new Cart());
+
+    assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.PENDING);
+    assertThat(order.getStatus()).isEqualTo("P");
+  }
+
+  // R5: setting the status with the enum stores its short code
+  @Test
+  void setOrderStatusStoresItsCode() {
+    Order order = new Order();
+
+    order.setOrderStatus(OrderStatus.PENDING);
+
+    assertThat(order.getStatus()).isEqualTo("P");
+  }
+
+  // R5: a code the app does not know (like "OK" used in OrderMapperTest) does not crash
+  @Test
+  void unknownStatusCodeGivesNull() {
+    Order order = new Order();
+
+    order.setStatus("OK");
+
+    assertThat(order.getOrderStatus()).isNull();
+  }
+
 }
