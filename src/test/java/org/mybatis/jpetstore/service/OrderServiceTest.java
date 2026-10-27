@@ -18,6 +18,8 @@ package org.mybatis.jpetstore.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -100,14 +102,44 @@ class OrderServiceTest {
     // when
     when(orderMapper.getOrder(orderId)).thenReturn(order);
     when(lineItemMapper.getLineItemsByOrderId(orderId)).thenReturn(lineItems);
-    when(itemMapper.getItem(itemId)).thenReturn(new Item());
-    when(itemMapper.getInventoryQuantity(itemId)).thenReturn(5);
+
+    // R7: getItem() returns the stock level itself (like the real ItemMapper.xml query does)
+    Item itemWithStock = new Item();
+    itemWithStock.setQuantity(5);
+    when(itemMapper.getItem(itemId)).thenReturn(itemWithStock);
 
     // then
     Order expectedOrder = orderService.getOrder(orderId);
     assertThat(expectedOrder).isEqualTo(order);
     assertThat(expectedOrder.getLineItems()).hasSize(1);
     assertThat(expectedOrder.getLineItems().get(0).getItem().getQuantity()).isEqualTo(5);
+  }
+
+  // R7: performance - each order line costs one item query, and the stock is NOT queried separately
+  @Test
+  void getOrderDoesNotQueryInventorySeparately() {
+    int orderId = 1;
+    Order order = new Order();
+
+    List<LineItem> lineItems = new ArrayList<>();
+    LineItem first = new LineItem();
+    first.setItemId("EST-1");
+    lineItems.add(first);
+    LineItem second = new LineItem();
+    second.setItemId("EST-2");
+    lineItems.add(second);
+
+    when(orderMapper.getOrder(orderId)).thenReturn(order);
+    when(lineItemMapper.getLineItemsByOrderId(orderId)).thenReturn(lineItems);
+    when(itemMapper.getItem("EST-1")).thenReturn(new Item());
+    when(itemMapper.getItem("EST-2")).thenReturn(new Item());
+
+    orderService.getOrder(orderId);
+
+    // 2 lines -> 2 item queries, and 0 inventory queries (before R7 there were 2 more)
+    verify(itemMapper, times(1)).getItem("EST-1");
+    verify(itemMapper, times(1)).getItem("EST-2");
+    verify(itemMapper, never()).getInventoryQuantity(any());
   }
 
   /**
