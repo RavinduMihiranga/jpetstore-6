@@ -181,4 +181,20 @@ class OrderTest {
     assertThat(order.getOrderStatus()).isNull();
   }
 
+  // R6: shipping and billing start the same but can be changed separately
+  // (if both pointed at one Address, changing the ship city would change the bill city too)
+  @Test
+  void shippingAndBillingAddressesAreIndependent() {
+    Account account = new Account();
+    account.setCity("City");
+
+    Order order = new Order();
+    order.initOrder(account, new Cart());
+
+    order.setShipCity("Other City");
+
+    assertThat(order.getShipCity()).isEqualTo("Other City");
+    assertThat(order.getBillCity()).isEqualTo("City");
+  }
+
 }
