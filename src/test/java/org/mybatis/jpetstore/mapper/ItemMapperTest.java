@@ -139,6 +139,19 @@ class ItemMapperTest {
 
   }
 
+  // R7: getItem() already reads the stock level from the INVENTORY table (QTY AS quantity),
+  // so OrderService does not need a second query for it
+  @Test
+  void getItemAlreadyReturnsInventoryQuantity() {
+    String itemId = "EST-1";
+
+    Item item = mapper.getItem(itemId);
+    int quantityFromSeparateQuery = mapper.getInventoryQuantity(itemId);
+
+    assertThat(item.getQuantity()).isEqualTo(quantityFromSeparateQuery);
+    assertThat(item.getQuantity()).isEqualTo(10000);
+  }
+
   /**
    * Update inventory quantity.
    */

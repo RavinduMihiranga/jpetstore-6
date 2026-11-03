@@ -21,7 +21,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -32,36 +31,27 @@ public class Order implements Serializable {
   /** The serial version uid. */
   private static final long serialVersionUID = 6321792448424424931L;
 
+  // R4: Replace Literal with Constant
+  // Placeholder values pre-filled in the order form (NewOrderForm.jsp tells users to use a fake card number)
+  // The user can change the card details on the form before placing the order
+  private static final String DEFAULT_CREDIT_CARD = "999 9999 9999 9999";
+  private static final String DEFAULT_EXPIRY_DATE = "12/03";
+  private static final String DEFAULT_CARD_TYPE = "Visa";
+  private static final String DEFAULT_COURIER = "UPS";
+  private static final String DEFAULT_LOCALE = "CA";
+
   /** The order id. */
   private int orderId;
   /** The username. */
   private String username;
   /** The order date. */
   private LocalDateTime orderDate;
-  /** The ship address1. */
-  private String shipAddress1;
-  /** The ship address2. */
-  private String shipAddress2;
-  /** The ship city. */
-  private String shipCity;
-  /** The ship state. */
-  private String shipState;
-  /** The ship zip. */
-  private String shipZip;
-  /** The ship country. */
-  private String shipCountry;
-  /** The bill address1. */
-  private String billAddress1;
-  /** The bill address2. */
-  private String billAddress2;
-  /** The bill city. */
-  private String billCity;
-  /** The bill state. */
-  private String billState;
-  /** The bill zip. */
-  private String billZip;
-  /** The bill country. */
-  private String billCountry;
+
+  // R6: Extract Class
+  // These two objects replace 16 separate fields (shipToFirstName ... shipCountry and billToFirstName ... billCountry).
+  // They start empty so MyBatis and the order form can fill them in through the setters below.
+  private Address shippingAddress = new Address();
+  private Address billingAddress = new Address();
   /** The courier. */
   private String courier;
   /** The total price. */
@@ -144,232 +134,136 @@ public class Order implements Serializable {
     this.orderDate = orderDate;
   }
 
-  /**
-   * Gets the ship address1.
-   *
-   * @return the ship address1
-   */
+  // R6: the whole shipping address as one object
+  public Address getShippingAddress() {
+    return shippingAddress;
+  }
+
+  public void setShippingAddress(Address shippingAddress) {
+    if (shippingAddress == null) {
+      throw new IllegalArgumentException("Shipping address cannot be null.");
+    }
+
+    this.shippingAddress = shippingAddress;
+  }
+
+  // R6: the whole billing address as one object
+  public Address getBillingAddress() {
+    return billingAddress;
+  }
+
+  public void setBillingAddress(Address billingAddress) {
+    if (billingAddress == null) {
+      throw new IllegalArgumentException("Billing address cannot be null.");
+    }
+
+    this.billingAddress = billingAddress;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Old shipping getters and setters, kept so nothing outside Order has to change
+  // Each one now simply reads or writes the shippingAddress object
+  // ---------------------------------------------------------------------------
+
   public String getShipAddress1() {
-    return shipAddress1;
+    return shippingAddress.getAddress1();
   }
 
-  /**
-   * Sets the ship address1.
-   *
-   * @param shipAddress1
-   *          the ship address1
-   */
   public void setShipAddress1(String shipAddress1) {
-    this.shipAddress1 = shipAddress1;
+    shippingAddress.setAddress1(shipAddress1);
   }
 
-  /**
-   * Gets the ship address2.
-   *
-   * @return the ship address2
-   */
   public String getShipAddress2() {
-    return shipAddress2;
+    return shippingAddress.getAddress2();
   }
 
-  /**
-   * Sets the ship address2.
-   *
-   * @param shipAddress2
-   *          the ship address2
-   */
   public void setShipAddress2(String shipAddress2) {
-    this.shipAddress2 = shipAddress2;
+    shippingAddress.setAddress2(shipAddress2);
   }
 
-  /**
-   * Gets the ship city.
-   *
-   * @return the ship city
-   */
   public String getShipCity() {
-    return shipCity;
+    return shippingAddress.getCity();
   }
 
-  /**
-   * Sets the ship city.
-   *
-   * @param shipCity
-   *          the ship city
-   */
   public void setShipCity(String shipCity) {
-    this.shipCity = shipCity;
+    shippingAddress.setCity(shipCity);
   }
 
-  /**
-   * Gets the ship state.
-   *
-   * @return the ship state
-   */
   public String getShipState() {
-    return shipState;
+    return shippingAddress.getState();
   }
 
-  /**
-   * Sets the ship state.
-   *
-   * @param shipState
-   *          the ship state
-   */
   public void setShipState(String shipState) {
-    this.shipState = shipState;
+    shippingAddress.setState(shipState);
   }
 
-  /**
-   * Gets the ship zip.
-   *
-   * @return the ship zip
-   */
   public String getShipZip() {
-    return shipZip;
+    return shippingAddress.getZip();
   }
 
-  /**
-   * Sets the ship zip.
-   *
-   * @param shipZip
-   *          the ship zip
-   */
   public void setShipZip(String shipZip) {
-    this.shipZip = shipZip;
+    shippingAddress.setZip(shipZip);
   }
 
-  /**
-   * Gets the ship country.
-   *
-   * @return the ship country
-   */
   public String getShipCountry() {
-    return shipCountry;
+    return shippingAddress.getCountry();
   }
 
-  /**
-   * Sets the ship country.
-   *
-   * @param shipCountry
-   *          the ship country
-   */
   public void setShipCountry(String shipCountry) {
-    this.shipCountry = shipCountry;
+    shippingAddress.setCountry(shipCountry);
   }
 
-  /**
-   * Gets the bill address1.
-   *
-   * @return the bill address1
-   */
+  // ---------------------------------------------------------------------------
+  // Old billing getters and setters, kept for the same reason.
+  // Each one now simply reads or writes the billingAddress object.
+  // ---------------------------------------------------------------------------
+
   public String getBillAddress1() {
-    return billAddress1;
+    return billingAddress.getAddress1();
   }
 
-  /**
-   * Sets the bill address1.
-   *
-   * @param billAddress1
-   *          the bill address1
-   */
   public void setBillAddress1(String billAddress1) {
-    this.billAddress1 = billAddress1;
+    billingAddress.setAddress1(billAddress1);
   }
 
-  /**
-   * Gets the bill address2.
-   *
-   * @return the bill address2
-   */
   public String getBillAddress2() {
-    return billAddress2;
+    return billingAddress.getAddress2();
   }
 
-  /**
-   * Sets the bill address2.
-   *
-   * @param billAddress2
-   *          the bill address2
-   */
   public void setBillAddress2(String billAddress2) {
-    this.billAddress2 = billAddress2;
+    billingAddress.setAddress2(billAddress2);
   }
 
-  /**
-   * Gets the bill city.
-   *
-   * @return the bill city
-   */
   public String getBillCity() {
-    return billCity;
+    return billingAddress.getCity();
   }
 
-  /**
-   * Sets the bill city.
-   *
-   * @param billCity
-   *          the bill city
-   */
   public void setBillCity(String billCity) {
-    this.billCity = billCity;
+    billingAddress.setCity(billCity);
   }
 
-  /**
-   * Gets the bill state.
-   *
-   * @return the bill state
-   */
   public String getBillState() {
-    return billState;
+    return billingAddress.getState();
   }
 
-  /**
-   * Sets the bill state.
-   *
-   * @param billState
-   *          the bill state
-   */
   public void setBillState(String billState) {
-    this.billState = billState;
+    billingAddress.setState(billState);
   }
 
-  /**
-   * Gets the bill zip.
-   *
-   * @return the bill zip
-   */
   public String getBillZip() {
-    return billZip;
+    return billingAddress.getZip();
   }
 
-  /**
-   * Sets the bill zip.
-   *
-   * @param billZip
-   *          the bill zip
-   */
   public void setBillZip(String billZip) {
-    this.billZip = billZip;
+    billingAddress.setZip(billZip);
   }
 
-  /**
-   * Gets the bill country.
-   *
-   * @return the bill country
-   */
   public String getBillCountry() {
-    return billCountry;
+    return billingAddress.getCountry();
   }
 
-  /**
-   * Sets the bill country.
-   *
-   * @param billCountry
-   *          the bill country
-   */
   public void setBillCountry(String billCountry) {
-    this.billCountry = billCountry;
+    billingAddress.setCountry(billCountry);
   }
 
   /**
@@ -410,80 +304,40 @@ public class Order implements Serializable {
     this.totalPrice = totalPrice;
   }
 
-  /**
-   * Gets the bill to first name.
-   *
-   * @return the bill to first name
-   */
+  // ---------------------------------------------------------------------------
+  // Old name getters and setters, kept for the same reason.
+  // ---------------------------------------------------------------------------
+
   public String getBillToFirstName() {
-    return billToFirstName;
+    return billingAddress.getFirstName();
   }
 
-  /**
-   * Sets the bill to first name.
-   *
-   * @param billToFirstName
-   *          the bill to first name
-   */
   public void setBillToFirstName(String billToFirstName) {
-    this.billToFirstName = billToFirstName;
+    billingAddress.setFirstName(billToFirstName);
   }
 
-  /**
-   * Gets the bill to last name.
-   *
-   * @return the bill to last name
-   */
   public String getBillToLastName() {
-    return billToLastName;
+    return billingAddress.getLastName();
   }
 
-  /**
-   * Sets the bill to last name.
-   *
-   * @param billToLastName
-   *          the bill to last name
-   */
   public void setBillToLastName(String billToLastName) {
-    this.billToLastName = billToLastName;
+    billingAddress.setLastName(billToLastName);
   }
 
-  /**
-   * Gets the ship to first name.
-   *
-   * @return the ship to first name
-   */
   public String getShipToFirstName() {
-    return shipToFirstName;
+    return shippingAddress.getFirstName();
   }
 
-  /**
-   * Sets the ship to first name.
-   *
-   * @param shipFoFirstName
-   *          the ship fo first name
-   */
-  public void setShipToFirstName(String shipFoFirstName) {
-    this.shipToFirstName = shipFoFirstName;
+  public void setShipToFirstName(String shipToFirstName) {
+    shippingAddress.setFirstName(shipToFirstName);
   }
 
-  /**
-   * Gets the ship to last name.
-   *
-   * @return the ship to last name
-   */
   public String getShipToLastName() {
-    return shipToLastName;
+    return shippingAddress.getLastName();
   }
 
-  /**
-   * Sets the ship to last name.
-   *
-   * @param shipToLastName
-   *          the ship to last name
-   */
   public void setShipToLastName(String shipToLastName) {
-    this.shipToLastName = shipToLastName;
+    shippingAddress.setLastName(shipToLastName);
   }
 
   /**
@@ -581,6 +435,21 @@ public class Order implements Serializable {
     this.status = status;
   }
 
+  // R5: the status as an enum
+  // Returns null if the stored code is not a known status
+  public OrderStatus getOrderStatus() {
+    return OrderStatus.fromCode(status);
+  }
+
+  // R5: set the status using the enum
+  public void setOrderStatus(OrderStatus orderStatus) {
+    if (orderStatus == null) {
+      throw new IllegalArgumentException("Order status cannot be null.");
+    }
+
+    this.status = orderStatus.getCode();
+  }
+
   /**
    * Sets the line items.
    *
@@ -608,44 +477,40 @@ public class Order implements Serializable {
    * @param cart
    *          the cart
    */
+  // Fill in a new order from the customer's account and their cart
+  // R4: Extract Method. Each step now lives in its own small method,
+  // so this method reads like a list of steps instead of 39 lines of assignments.
   public void initOrder(Account account, Cart cart) {
-
     username = account.getUsername();
     orderDate = LocalDateTime.now(ZoneId.systemDefault());
 
-    shipToFirstName = account.getFirstName();
-    shipToLastName = account.getLastName();
-    shipAddress1 = account.getAddress1();
-    shipAddress2 = account.getAddress2();
-    shipCity = account.getCity();
-    shipState = account.getState();
-    shipZip = account.getZip();
-    shipCountry = account.getCountry();
-
-    billToFirstName = account.getFirstName();
-    billToLastName = account.getLastName();
-    billAddress1 = account.getAddress1();
-    billAddress2 = account.getAddress2();
-    billCity = account.getCity();
-    billState = account.getState();
-    billZip = account.getZip();
-    billCountry = account.getCountry();
+    // R6: build the customer's address once, then use it for shipping and billing
+    // Billing gets its own copy, so changing the shipping address later does not change the billing address
+    shippingAddress = Address.fromAccount(account);
+    billingAddress = shippingAddress.copy();
 
     totalPrice = cart.getSubTotal();
+    applyDefaultOrderDetails();
 
-    creditCard = "999 9999 9999 9999";
-    expiryDate = "12/03";
-    cardType = "Visa";
-    courier = "UPS";
-    locale = "CA";
-    status = "P";
+    addLineItemsFrom(cart);
+  }
 
-    Iterator<CartItem> i = cart.getAllCartItems();
-    while (i.hasNext()) {
-      CartItem cartItem = i.next();
+  // Pre-fill the payment and delivery details shown on the order form
+  private void applyDefaultOrderDetails() {
+    creditCard = DEFAULT_CREDIT_CARD;
+    expiryDate = DEFAULT_EXPIRY_DATE;
+    cardType = DEFAULT_CARD_TYPE;
+    courier = DEFAULT_COURIER;
+    locale = DEFAULT_LOCALE;
+    // Every new order starts as pending
+    status = OrderStatus.PENDING.getCode();
+  }
+
+  // Turn every item in the cart into a numbered line on the order
+  private void addLineItemsFrom(Cart cart) {
+    for (CartItem cartItem : cart.getCartItemList()) {
       addLineItem(cartItem);
     }
-
   }
 
   /**

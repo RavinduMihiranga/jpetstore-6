@@ -77,3 +77,23 @@ Perform integration tests for screen transition.
 ```
 $ ./mvnw clean verify -P tomcat9
 ```
+
+## Refactoring Notes
+
+This fork was refactored and all changes are on the `refactoring` branch, one commit per step.
+
+| Step | Refactoring | Where | What changed |
+|------|-------------|-------|--------------|
+| R1 | Move Method | `Cart`, `CartController` | `Cart.updateQuantity()` now handles quantity changes. Fixes a bug where an item set to 0 could not be added again. |
+| R2 | Substitute Algorithm | `Cart` | One `LinkedHashMap` replaces the old map + list. `getCartItemList()` returns a copy. `getAllCartItems()` is deprecated. |
+| R3 | Extract Method | `CartController` | `isMissingItemId()` and `showError()` replace copied code. |
+| R4 | Extract Method, Replace Magic Literal | `Order` | `initOrder()` split into small steps; default values are named constants. |
+| R5 | Replace Type Code with Enum | `Order`, `OrderStatus` | New `OrderStatus` enum. The `String` status is kept for the database. |
+| R6 | Extract Class | `Order`, `Address` | Shipping and billing are now two `Address` objects. Old getters/setters still work and delegate to `Address`. |
+| R7 | Remove redundant query | `OrderService` | `getOrder()` no longer queries stock separately; `getItem()` already returns it. |
+
+### Running the tests
+
+    ./mvnw test        (Windows PowerShell: .\mvnw.cmd test)
+
+115 tests, all passing.

@@ -247,6 +247,41 @@ class CartControllerTest {
     assertThat(cart.getCartItemList().get(0).getQuantity()).isEqualTo(1);
   }
 
+  // Regression test for the bug found during code analysis:
+  // setting a quantity to 0 removed the item from the cart's list but NOT from its map,
+  // so adding the same item again only bumped a hidden entry and the item never showed up
+  @Test
+  void itemCanBeAddedAgainAfterQuantitySetToZero() {
+    HttpSession session = mock(HttpSession.class);
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    Model model = new ExtendedModelMap();
+
+    // Start with one item in the cart
+    Cart cart = new Cart();
+    Item item = new Item();
+    item.setItemId("EST-1");
+    item.setListPrice(new java.math.BigDecimal("10.00"));
+    cart.addItem(item, true);
+    when(session.getAttribute("cart")).thenReturn(cart);
+
+    // The user types 0 as the quantity, which should remove the item
+    when(request.getParameter("EST-1")).thenReturn("0");
+    cartController.updateCartQuantities(request, session, model);
+
+    // The cart should forget the item completely (this line failed before R1)
+    assertThat(cart.containsItemId("EST-1")).isFalse();
+
+    // The user adds the same item again
+    when(catalogService.isItemInStock("EST-1")).thenReturn(true);
+    when(catalogService.getItem("EST-1")).thenReturn(item);
+    cartController.addItemToCart("EST-1", session, model);
+
+    // It should be visible again with quantity 1, and the map should agree
+    assertThat(cart.getCartItemList()).hasSize(1);
+    assertThat(cart.getCartItemList().get(0).getQuantity()).isEqualTo(1);
+    assertThat(cart.containsItemId("EST-1")).isTrue();
+  }
+
   /**
    * Check out returns checkout view with cart from session.
    */
@@ -278,5 +313,29 @@ class CartControllerTest {
     assertThat(model.asMap().get("cart")).isInstanceOf(Cart.class);
     org.mockito.Mockito.verify(session).setAttribute(org.mockito.ArgumentMatchers.eq("cart"),
         org.mockito.ArgumentMatchers.any(Cart.class));
+  }
+
+  // R3: an ID that is only spaces counts as missing when adding
+  @Test
+  void addItemWithBlankIdReturnsError() {
+    HttpSession session = mock(HttpSession.class);
+    Model model = new ExtendedModelMap();
+
+    String view = cartController.addItemToCart("   ", session, model);
+
+    assertThat(view).isEqualTo("common/Error");
+    assertThat(model.asMap().get("message")).isEqualTo("Invalid item ID: cannot add item to cart.");
+  }
+
+  // R3: an ID that is only spaces counts as missing when removing
+  @Test
+  void removeItemWithBlankIdReturnsError() {
+    HttpSession session = mock(HttpSession.class);
+    Model model = new ExtendedModelMap();
+
+    String view = cartController.removeItemFromCart("   ", session, model);
+
+    assertThat(view).isEqualTo("common/Error");
+    assertThat(model.asMap().get("message")).isEqualTo("Invalid item ID: cannot remove item from cart.");
   }
 }

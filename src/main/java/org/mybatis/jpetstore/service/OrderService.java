@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.mybatis.jpetstore.domain.Item;
+import org.mybatis.jpetstore.domain.LineItem;
 import org.mybatis.jpetstore.domain.Order;
 import org.mybatis.jpetstore.domain.Sequence;
 import org.mybatis.jpetstore.mapper.ItemMapper;
@@ -103,11 +104,13 @@ public class OrderService {
     Order order = orderMapper.getOrder(orderId);
     order.setLineItems(lineItemMapper.getLineItemsByOrderId(orderId));
 
-    order.getLineItems().forEach(lineItem -> {
+    // Attach the full item to each line of the order
+    // R7: getItem() already brings the stock level from the INVENTORY table (QTY AS quantity),
+    // so the extra getInventoryQuantity() call that used to be here was removed
+    for (LineItem lineItem : order.getLineItems()) {
       Item item = itemMapper.getItem(lineItem.getItemId());
-      item.setQuantity(itemMapper.getInventoryQuantity(lineItem.getItemId()));
       lineItem.setItem(item);
-    });
+    }
 
     return order;
   }
